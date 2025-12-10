@@ -1,0 +1,3 @@
+# 项目排除路径
+/exam-system-online-core/target/
+/exam-system-online-server/target/
