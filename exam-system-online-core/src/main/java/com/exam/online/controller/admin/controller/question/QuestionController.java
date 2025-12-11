@@ -31,6 +31,9 @@ public class QuestionController {
 
     private final QuestionService questionService;
 
+    /**
+     * 按标签搜索题目（分页）
+     */
     @GetMapping("/search-by-tag")
     public Result<List<QuestionResponse>> searchByTag(@RequestParam("tag") @NotBlank String tag,
                                               @RequestParam(value = "page", defaultValue = "1") @Min(1) int page,
@@ -38,11 +41,17 @@ public class QuestionController {
         return Result.success(questionService.listByTag(tag, page, size));
     }
 
+    /**
+     * 创建题目
+     */
     @PostMapping("/create")
     public Result<QuestionResponse> create(@Valid @RequestBody QuestionCreateRequest request) {
         return Result.success(questionService.createQuestion(request));
     }
 
+    /**
+     * 更新题目
+     */
     @PutMapping("/update")
     public Result<QuestionResponse> update(@Valid @RequestBody QuestionUpdateRequest request) {
         return Result.success(questionService.updateQuestion(request));

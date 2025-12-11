@@ -28,11 +28,17 @@ public class ExamController {
 
     private final ExamService examService;
 
+    /**
+     * 创建试卷
+     */
     @PostMapping("/create")
     public Result<ExamResponse> create(@Valid @RequestBody ExamCreateRequest request) {
         return Result.success(examService.createExam(request));
     }
 
+    /**
+     * 试卷添加题目
+     */
     @PostMapping("/{examId}/questions")
     public Result<Void> addQuestions(@PathVariable("examId") Long examId,
                                @Valid @RequestBody ExamAddQuestionsRequest request) {
@@ -40,6 +46,9 @@ public class ExamController {
         return Result.success("添加题目成功");
     }
 
+    /**
+     * 更新试卷信息
+     */
     @PutMapping("/{examId}")
     public Result<Void> update(@PathVariable("examId") Long examId,
                          @Valid @RequestBody ExamUpdateRequest request) {
@@ -47,6 +56,9 @@ public class ExamController {
         return Result.success("更新试卷成功");
     }
 
+    /**
+     * 更新试卷状态
+     */
     @PutMapping("/{examId}/status")
     public Result<Void> updateStatus(@PathVariable("examId") Long examId,
                                @Valid @RequestBody ExamStatusUpdateRequest request) {

@@ -1,4 +1,4 @@
-package com.exam.online.controller.student;
+package com.exam.online.controller.admin.controller.student;
 
 import com.exam.online.dto.ExamEnterRequest;
 import com.exam.online.dto.ExamEnterResponse;

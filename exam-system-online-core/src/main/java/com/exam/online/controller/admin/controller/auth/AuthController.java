@@ -22,11 +22,17 @@ public class AuthController {
 
     private final AuthService authService;
 
+    /**
+     * 用户登录
+     */
     @PostMapping("/login")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return Result.success(authService.login(request));
     }
 
+    /**
+     * 用户注册
+     */
     @PostMapping("/register")
     public Result<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
         return Result.success("注册成功", authService.register(request));
