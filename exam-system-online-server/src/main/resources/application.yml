@@ -24,3 +24,11 @@ logging:
   level:
     root: info
 
+rocketmq:
+  name-server: 192.168.27.104:9876
+  producer:
+    group: exam-producer-group
+  answer:
+    topic: exam-answer-save
+    consumer-group: exam-answer-consumer-group
+
