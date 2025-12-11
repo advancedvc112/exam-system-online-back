@@ -31,7 +31,28 @@ public class QuestionService {
         LambdaQueryWrapper<QuestionBankDO> wrapper = new LambdaQueryWrapper<QuestionBankDO>()
                 .eq(QuestionBankDO::getIsDeleted, 0)
                 .like(QuestionBankDO::getQuestionTags, tag)
-                .orderByDesc(QuestionBankDO::getId);
+                .orderByAsc(QuestionBankDO::getId);
+
+        Page<QuestionBankDO> pageResult = questionBankMapper.selectPage(new Page<>(safePage, safeSize), wrapper);
+
+        return pageResult.getRecords().stream()
+                .map(q -> new QuestionResponse(
+                        q.getId(),
+                        q.getQuestionCategory(),
+                        q.getQuestionContent(),
+                        sanitizeOptionsForResponse(q.getQuestionCategory(), q.getQuestionOptions()),
+                        q.getQuestionAnswer(),
+                        q.getQuestionTags()))
+                .toList();
+    }
+
+    public List<QuestionResponse> listAll(int page, int pageSize) {
+        int safePage = Math.max(page, 1);
+        long safeSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
+
+        LambdaQueryWrapper<QuestionBankDO> wrapper = new LambdaQueryWrapper<QuestionBankDO>()
+                .eq(QuestionBankDO::getIsDeleted, 0)
+                .orderByAsc(QuestionBankDO::getId);
 
         Page<QuestionBankDO> pageResult = questionBankMapper.selectPage(new Page<>(safePage, safeSize), wrapper);
 

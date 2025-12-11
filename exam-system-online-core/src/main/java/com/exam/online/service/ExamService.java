@@ -1,5 +1,7 @@
 package com.exam.online.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.exam.online.dal.dataobject.ExamDO;
 import com.exam.online.dal.dataobject.ExamQuestionDO;
 import com.exam.online.dal.mapper.ExamMapper;
@@ -26,6 +28,31 @@ public class ExamService {
 
     private final ExamMapper examMapper;
     private final ExamQuestionMapper examQuestionMapper;
+    private static final long MAX_PAGE_SIZE = 100L;
+
+    public List<ExamResponse> listAll(int page, int pageSize) {
+        int safePage = Math.max(page, 1);
+        long safeSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
+
+        LambdaQueryWrapper<ExamDO> wrapper = new LambdaQueryWrapper<ExamDO>()
+                .eq(ExamDO::getIsDelete, 0)
+                .orderByAsc(ExamDO::getId);
+
+        Page<ExamDO> pageResult = examMapper.selectPage(new Page<>(safePage, safeSize), wrapper);
+
+        return pageResult.getRecords().stream()
+                .map(e -> new ExamResponse(
+                        e.getId(),
+                        e.getExamName(),
+                        e.getExamDescription(),
+                        e.getExamType(),
+                        e.getStatus(),
+                        e.getStartTime(),
+                        e.getEndTime(),
+                        e.getDuration()
+                ))
+                .toList();
+    }
 
     public ExamResponse createExam(ExamCreateRequest request) {
         validateTimeRange(request.getStartTime(), request.getEndTime());

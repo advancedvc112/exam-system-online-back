@@ -37,6 +37,7 @@ public class StudentExamController {
             @PathVariable("examId") Long examId,
             @Valid @RequestBody ExamEnterRequest request) {
         
+        log.info("学生进入考试请求 examId={}, studentId={}", examId, request.getStudentId());
         ExamParticipantDO participant = examParticipantService.enterExam(examId, request.getStudentId());
         
         // 从participant中获取token
@@ -55,6 +56,7 @@ public class StudentExamController {
             @PathVariable("examId") Long examId,
             @Valid @RequestBody SaveAnswerRequest request) {
         
+        log.info("保存答题请求 examId={}, studentId={}, sortOrder={}", examId, request.getStudentId(), request.getSortOrder());
         // 缓冲答题记录，3秒后自动写入Redis和MQ
         answerBufferService.bufferAnswer(
             examId,
@@ -74,6 +76,7 @@ public class StudentExamController {
             @PathVariable("examId") Long examId,
             @Valid @RequestBody SubmitExamRequest request) {
         
+        log.info("提交考试请求 examId={}, studentId={}", examId, request.getStudentId());
         // 1. 强制刷新所有缓冲的答题记录
         answerBufferService.flushAll(examId, request.getStudentId());
         

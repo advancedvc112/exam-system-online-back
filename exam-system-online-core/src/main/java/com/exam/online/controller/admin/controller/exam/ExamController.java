@@ -8,18 +8,23 @@ import com.exam.online.dto.ExamUpdateRequest;
 import com.exam.online.dto.Result;
 import com.exam.online.service.ExamService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/exams")
 @Validated
@@ -29,10 +34,21 @@ public class ExamController {
     private final ExamService examService;
 
     /**
+     * 分页查询全部考试
+     */
+    @GetMapping("/list")
+    public Result<java.util.List<ExamResponse>> listAll(@RequestParam(value = "page", defaultValue = "1") @Min(1) int page,
+                                                        @RequestParam(value = "size", defaultValue = "20") @Min(1) int size) {
+        log.info("分页查询考试列表 page={}, size={}", page, size);
+        return Result.success(examService.listAll(page, size));
+    }
+
+    /**
      * 创建试卷
      */
     @PostMapping("/create")
     public Result<ExamResponse> create(@Valid @RequestBody ExamCreateRequest request) {
+        log.info("创建考试，name={}, type={}, creatorId={}", request.getExamName(), request.getExamType(), request.getCreatorId());
         return Result.success(examService.createExam(request));
     }
 
@@ -42,6 +58,7 @@ public class ExamController {
     @PostMapping("/{examId}/questions")
     public Result<Void> addQuestions(@PathVariable("examId") Long examId,
                                @Valid @RequestBody ExamAddQuestionsRequest request) {
+        log.info("试卷添加题目，examId={}, items={}", examId, request.getItems() == null ? 0 : request.getItems().size());
         examService.addQuestions(examId, request);
         return Result.success("添加题目成功");
     }
@@ -52,6 +69,7 @@ public class ExamController {
     @PutMapping("/{examId}")
     public Result<Void> update(@PathVariable("examId") Long examId,
                          @Valid @RequestBody ExamUpdateRequest request) {
+        log.info("更新考试，examId={}", examId);
         examService.updateExam(examId, request);
         return Result.success("更新试卷成功");
     }
@@ -62,6 +80,7 @@ public class ExamController {
     @PutMapping("/{examId}/status")
     public Result<Void> updateStatus(@PathVariable("examId") Long examId,
                                @Valid @RequestBody ExamStatusUpdateRequest request) {
+        log.info("更新考试状态，examId={}, status={}", examId, request.getStatus());
         examService.updateStatus(examId, request);
         return Result.success("更新考试状态成功");
     }
