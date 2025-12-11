@@ -2,11 +2,11 @@ package com.exam.online.controller.student;
 
 import com.exam.online.dto.ExamEnterRequest;
 import com.exam.online.dto.ExamEnterResponse;
+import com.exam.online.dto.Result;
 import com.exam.online.dto.SaveAnswerRequest;
 import com.exam.online.dto.SubmitExamRequest;
 import com.exam.online.dal.dataobject.ExamParticipantDO;
 import com.exam.online.service.AnswerBufferService;
-import com.exam.online.service.ExamAnswerService;
 import com.exam.online.service.ExamParticipantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ public class StudentExamController {
      * 进入考试
      */
     @PostMapping("/{examId}/enter")
-    public ExamEnterResponse enterExam(
+    public Result<ExamEnterResponse> enterExam(
             @PathVariable("examId") Long examId,
             @Valid @RequestBody ExamEnterRequest request) {
         
@@ -41,15 +41,17 @@ public class StudentExamController {
         
         // 从participant中获取token
         String token = participant.getAccessToken();
+        log.info("学生进入考试成功，返回token: examId={}, studentId={}, participantId={}, token={}",
+                examId, request.getStudentId(), participant.getId(), token);
         
-        return new ExamEnterResponse(token, "进入考试成功", participant.getId());
+        return Result.success(new ExamEnterResponse(token, "进入考试成功", participant.getId()));
     }
     
     /**
      * 保存答题记录（带3秒缓冲）
      */
     @PostMapping("/{examId}/answers")
-    public String saveAnswer(
+    public Result<Void> saveAnswer(
             @PathVariable("examId") Long examId,
             @Valid @RequestBody SaveAnswerRequest request) {
         
@@ -61,14 +63,14 @@ public class StudentExamController {
             request.getAnswer()
         );
         
-        return "答题记录已保存";
+        return Result.success("答题记录已保存");
     }
     
     /**
      * 提交考试
      */
     @PostMapping("/{examId}/submit")
-    public String submitExam(
+    public Result<Void> submitExam(
             @PathVariable("examId") Long examId,
             @Valid @RequestBody SubmitExamRequest request) {
         
@@ -85,13 +87,13 @@ public class StudentExamController {
         // 3. 更新提交状态
         examParticipantService.submitExam(examId, request.getStudentId());
         
-        return "考试提交成功";
+        return Result.success("考试提交成功");
     }
     
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(IllegalArgumentException.class)
-    public String handleIllegalArgumentException(IllegalArgumentException ex) {
-        return ex.getMessage();
+    public Result<Void> handleIllegalArgumentException(IllegalArgumentException ex) {
+        return Result.failure(ex.getMessage());
     }
 }
 

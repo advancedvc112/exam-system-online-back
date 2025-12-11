@@ -9,12 +9,17 @@ spring:
     url: jdbc:mysql://localhost:3306/online_exam_system?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
     password: root
-  redis:
-    host: 192.168.27.104
-    port: 6379
-    database: 0
-    password:
-    timeout: 3000ms
+  data:
+    redis:
+      host: 192.168.27.104
+      port: 6379
+      database: 0
+      password:
+      timeout: 3000ms
+exam:
+  status:
+    update-interval: 60s
+    initial-delay: 10s
 
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml

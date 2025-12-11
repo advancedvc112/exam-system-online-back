@@ -19,20 +19,21 @@ import java.util.List;
 public class QuestionService {
 
     private final QuestionBankMapper questionBankMapper;
-    private static final long PAGE_SIZE = 20L;
+    private static final long MAX_PAGE_SIZE = 100L;
 
-    public List<QuestionResponse> listByTag(String tag, int page) {
+    public List<QuestionResponse> listByTag(String tag, int page, int pageSize) {
         if (!StringUtils.hasText(tag)) {
             throw new IllegalArgumentException("tag不能为空");
         }
         int safePage = Math.max(page, 1);
+        long safeSize = Math.min(Math.max(pageSize, 1), MAX_PAGE_SIZE);
 
         LambdaQueryWrapper<QuestionBankDO> wrapper = new LambdaQueryWrapper<QuestionBankDO>()
                 .eq(QuestionBankDO::getIsDeleted, 0)
                 .like(QuestionBankDO::getQuestionTags, tag)
                 .orderByDesc(QuestionBankDO::getId);
 
-        Page<QuestionBankDO> pageResult = questionBankMapper.selectPage(new Page<>(safePage, PAGE_SIZE), wrapper);
+        Page<QuestionBankDO> pageResult = questionBankMapper.selectPage(new Page<>(safePage, safeSize), wrapper);
 
         return pageResult.getRecords().stream()
                 .map(q -> new QuestionResponse(

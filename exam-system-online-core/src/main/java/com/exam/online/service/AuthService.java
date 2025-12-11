@@ -23,7 +23,7 @@ public class AuthService {
     public LoginResponse login(LoginRequest request) {
         SystemUserDO user = getByUsername(request.getUsername());
         if (user == null) {
-            user = createUser(request.getUsername(), request.getUserpassword());
+            user = createUser(request.getUsername(), request.getUserpassword(), null);
         } else if (!passwordEncoder.matches(request.getUserpassword(), user.getPassword())) {
             throw new IllegalArgumentException("用户名或密码错误");
         }
@@ -32,7 +32,7 @@ public class AuthService {
         user.setLastLoginTime(now);
         systemUserMapper.updateById(user);
 
-        return new LoginResponse(user.getId(), user.getUsername(), "登录成功");
+        return new LoginResponse(user.getId(), user.getUsername());
     }
 
     public LoginResponse register(RegisterRequest request) {
@@ -40,8 +40,8 @@ public class AuthService {
         if (exists != null) {
             throw new IllegalArgumentException("用户名已存在");
         }
-        SystemUserDO user = createUser(request.getUsername(), request.getUserpassword());
-        return new LoginResponse(user.getId(), user.getUsername(), "注册成功");
+        SystemUserDO user = createUser(request.getUsername(), request.getUserpassword(), request.getUserRole());
+        return new LoginResponse(user.getId(), user.getUsername());
     }
 
     private SystemUserDO getByUsername(String username) {
@@ -51,7 +51,7 @@ public class AuthService {
                 .last("LIMIT 1"));
     }
 
-    private SystemUserDO createUser(String username, String rawPassword) {
+    private SystemUserDO createUser(String username, String rawPassword, Integer userRole) {
         LocalDateTime now = LocalDateTime.now();
 
         SystemUserDO user = new SystemUserDO();
@@ -62,7 +62,9 @@ public class AuthService {
         user.setLastLoginIp(null);
         user.setRegisterTime(now);
         user.setUpdatedTime(now);
-        user.setUserRole(1);
+        // 默认学生角色；允许调用方传入教师/管理员
+        int role = (userRole == null || userRole < 1 || userRole > 3) ? 1 : userRole;
+        user.setUserRole(role);
         user.setIsDeleted(0);
 
         systemUserMapper.insert(user);

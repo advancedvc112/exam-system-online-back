@@ -3,6 +3,7 @@ package com.exam.online.controller.admin.controller.auth;
 import com.exam.online.dto.LoginRequest;
 import com.exam.online.dto.LoginResponse;
 import com.exam.online.dto.RegisterRequest;
+import com.exam.online.dto.Result;
 import com.exam.online.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,19 +23,19 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        return Result.success(authService.login(request));
     }
 
     @PostMapping("/register")
-    public LoginResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
+    public Result<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return Result.success("注册成功", authService.register(request));
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(IllegalArgumentException.class)
-    public String handleIllegalArgumentException(IllegalArgumentException ex) {
-        return ex.getMessage();
+    public Result<Void> handleIllegalArgumentException(IllegalArgumentException ex) {
+        return Result.failure(ex.getMessage());
     }
 }
 

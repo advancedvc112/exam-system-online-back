@@ -64,12 +64,17 @@ public class ExamParticipantService {
                 ttlSeconds = secondsUntilEnd + 30 * 60; // 考试结束时间 + 30分钟缓冲
             }
         }
+
+        log.info("准备写入考试token到Redis: examId={}, studentId={}, key={}, ttlSeconds={}, token={}",
+                examId, studentId, tokenKey, ttlSeconds, token);
         
         // 使用SETNX原子操作，如果key已存在则返回false
         Boolean success = redisService.setIfAbsent(tokenKey, token, ttlSeconds);
         if (Boolean.FALSE.equals(success)) {
+            log.warn("重复进入考试被拒绝: examId={}, studentId={}, key={}", examId, studentId, tokenKey);
             throw new IllegalArgumentException("您已进入考试，不允许重复进入");
         }
+        log.info("考试token写入Redis成功: examId={}, studentId={}, key={}", examId, studentId, tokenKey);
         
         // 5. 创建或更新参与记录
         ExamParticipantDO participant = examParticipantMapper.selectOne(
