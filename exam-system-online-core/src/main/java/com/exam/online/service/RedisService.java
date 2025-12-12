@@ -111,12 +111,15 @@ public class RedisService {
     @SuppressWarnings("unchecked")
     public <T> T executeScript(String script, java.util.List<String> keys, java.util.List<Object> args) {
         try {
+            log.debug("[Redis Lua] 准备执行脚本: keys={}, args={}", keys, args);
             org.springframework.data.redis.core.script.DefaultRedisScript<T> redisScript = 
                 new org.springframework.data.redis.core.script.DefaultRedisScript<>();
             redisScript.setScriptText(script);
             redisScript.setResultType((Class<T>) Long.class);
             // 使用正确的execute方法签名：execute(RedisScript<T> script, List<K> keys, Object... args)
-            return redisTemplate.execute(redisScript, keys, args.toArray());
+            T result = redisTemplate.execute(redisScript, keys, args.toArray());
+            log.debug("[Redis Lua] 脚本执行完成: keys={}, result={}", keys, result);
+            return result;
         } catch (Exception e) {
             log.error("执行Lua脚本失败: script={}, keys={}, args={}", script, keys, args, e);
             throw new RuntimeException("执行Lua脚本失败", e);

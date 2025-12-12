@@ -39,6 +39,15 @@ public class ExamParticipantService {
             throw new IllegalArgumentException("您已进入考试，不允许重复进入");
         }
 
+        // 进入锁前先校验身份，非学生直接拒绝，减少锁竞争
+        SystemUserDO preCheckUser = systemUserMapper.selectById(studentId);
+        if (preCheckUser == null || preCheckUser.getIsDeleted() != null && preCheckUser.getIsDeleted() == 1) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+        if (preCheckUser.getUserRole() == null || preCheckUser.getUserRole() != 1) {
+            throw new IllegalArgumentException("只有学生可以进入考试");
+        }
+
         // 获取分布式锁
         boolean lockAcquired = distributedLockService.tryLockEnterExam(examId, studentId, 30);
         
