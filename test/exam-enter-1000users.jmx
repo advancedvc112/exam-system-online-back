@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="直接进入考试测试">
+      <stringProp name="TestPlan.comments">用户ID 206-1246 直接进入考试ID=2，无需登录</stringProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="baseUrl" elementType="Argument">
+            <stringProp name="Argument.name">baseUrl</stringProp>
+            <stringProp name="Argument.value">http://localhost:8080</stringProp>
+          </elementProp>
+          <elementProp name="enterExamPath" elementType="Argument">
+            <stringProp name="Argument.name">enterExamPath</stringProp>
+            <stringProp name="Argument.value">/api/student/exams/2/enter</stringProp>
+          </elementProp>
+          <elementProp name="startUserId" elementType="Argument">
+            <stringProp name="Argument.name">startUserId</stringProp>
+            <stringProp name="Argument.value">206</stringProp>
+          </elementProp>
+          <elementProp name="endUserId" elementType="Argument">
+            <stringProp name="Argument.name">endUserId</stringProp>
+            <stringProp name="Argument.value">1246</stringProp>
+          </elementProp>
+          <elementProp name="totalUsers" elementType="Argument">
+            <stringProp name="Argument.name">totalUsers</stringProp>
+            <stringProp name="Argument.value">1041</stringProp>
+          </elementProp>
+          <elementProp name="rampUpSeconds" elementType="Argument">
+            <stringProp name="Argument.name">rampUpSeconds</stringProp>
+            <stringProp name="Argument.value">60</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+    </TestPlan>
+    <hashTree>
+      <!-- HTTP默认配置 -->
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP默认配置">
+        <stringProp name="HTTPSampler.domain">localhost</stringProp>
+        <stringProp name="HTTPSampler.port">8080</stringProp>
+        <stringProp name="HTTPSampler.protocol">http</stringProp>
+        <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+      </ConfigTestElement>
+      <hashTree/>
+
+      <!-- HTTP头管理器 -->
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP头管理器">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="Content-Type" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- 主线程组 -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="直接进入考试">
+        <stringProp name="ThreadGroup.num_threads">${totalUsers}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${rampUpSeconds}</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <!-- 生成用户ID 206-1246 -->
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="生成用户ID">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+// 生成用户ID：206 到 1246
+int startUserId = Integer.parseInt(vars.get("startUserId"));  // 206
+int threadNum = ctx.getThreadNum();  // 0-1040
+int studentId = startUserId + threadNum;  // 206-1246
+
+// 确保不超过最大值
+int endUserId = Integer.parseInt(vars.get("endUserId"));  // 1246
+if (studentId > endUserId) {
+    studentId = endUserId;
+}
+
+vars.put("studentId", String.valueOf(studentId));
+log.info("线程 " + threadNum + " -> 用户ID: " + studentId + " 进入考试ID=2");
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <!-- 进入考试请求 -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="进入考试">
+          <stringProp name="HTTPSampler.path">${enterExamPath}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&quot;studentId&quot;:${studentId}}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <!-- 记录结果 -->
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="记录结果">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+// 记录请求结果
+int studentId = Integer.parseInt(vars.get("studentId"));
+String responseCode = prev.getResponseCode();
+String responseMessage = prev.getResponseMessage();
+boolean success = prev.isSuccessful();
+
+if (success) {
+    log.info("✓ 用户ID " + studentId + " 成功进入考试");
+} else {
+    log.error("✗ 用户ID " + studentId + " 进入考试失败: " + responseCode + " " + responseMessage);
+
+    // 如果实际响应是200但JMeter标记为失败，可能是断言问题，输出详细响应
+    if ("200".equals(responseCode)) {
+        log.warn("实际响应200但JMeter标记为失败，响应内容: " + prev.getResponseDataAsString());
+    }
+}
+]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+
+      <!-- 结果收集器 -->
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="汇总报告">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
