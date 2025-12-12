@@ -16,6 +16,14 @@ spring:
       database: 0
       password:
       timeout: 3000ms
+  redis:
+    redisson:
+      config: |
+        singleServerConfig:
+          address: "redis://192.168.27.104:6379"
+          database: 0
+          connectionPoolSize: 10
+          connectionMinimumIdleSize: 5
 exam:
   status:
     update-interval: 60s
@@ -36,4 +44,30 @@ rocketmq:
   answer:
     topic: exam-answer-save
     consumer-group: exam-answer-consumer-group
+
+rate-limit:
+  enabled: true
+  default-algorithm: token-bucket
+  user-level:
+    enabled: true
+    algorithm: token-bucket
+    rules:
+      enter-exam:
+        enabled: true
+        qps: 2
+        capacity: 2
+        refill-rate: 2
+        interval: 1
+      save-answer:
+        enabled: true
+        qps: 10
+        capacity: 10
+        refill-rate: 10
+        interval: 1
+      submit-exam:
+        enabled: true
+        qps: 1
+        capacity: 1
+        refill-rate: 1
+        interval: 1
 

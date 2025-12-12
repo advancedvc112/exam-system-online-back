@@ -50,10 +50,20 @@
 
 ## 5. 高并发处理（进入考试与修改答案）
 
-### 5.1 进入考试（发放 token）
+### 5.1 进入考试（发放 token + 分布式锁优化）
 
-- 流程：校验学生身份与考试时间 → 生成 token → Redis `SETNX` 写 `exam:token:{examId}:{studentId}`（TTL=考试结束+30 分钟）→ 已存在直接拒绝，防重复进入与并发踩踏 → upsert `exam_participants` 记录（状态=进行中，写 token）。
-- 关键点：SETNX 原子；TTL 避免长期占用；幂等 upsert；进入失败直接抛出，不影响其他人。
+- **分布式锁机制**：
+  - 使用 Redisson 分布式锁，锁 key：`exam:enter:lock:{examId}:{studentId}`
+  - 锁超时时间：30 秒（自动续期 watchdog）
+  - 获取锁失败策略：等待 100ms 后查询 Redis 中现有 token，如果存在则返回，否则返回"系统繁忙"
+- **流程**：
+  1. 尝试获取分布式锁（不等待，立即返回）
+  2. 获取锁成功：校验学生身份与考试时间 → 检查是否已进入（幂等）→ 生成 token → Redis `SETNX` 写 `exam:token:{examId}:{studentId}`（TTL=考试结束+30 分钟）→ upsert `exam_participants` 记录 → 释放锁
+  3. 获取锁失败：等待 100ms → 查询 Redis 中现有 token → 如果存在则返回参与记录，否则返回错误
+- **关键点**：
+  - 分布式锁保证同一学生并发请求的串行化，防止重复进入
+  - SETNX 原子操作双重保障，防止重复写入 token
+  - TTL 避免长期占用；幂等 upsert；进入失败直接抛出，不影响其他人
 
 ### 5.2 答题保存/修改（3 秒缓冲 + Redis + MQ）
 
@@ -67,11 +77,25 @@
   - 按 participantId+questionId upsert `answer_records`，更新 `userAnswer` 与 `changeTimes`，记录分值；RocketMQ 自带重试/死信保证最终一致。
 - 一致性：短期以内存+Redis+MQ+DB 多副本，最终以 DB 为准；Redis 作为近期答案热缓存；MQ 失败可重试或进死信。
 
-### 5.3 提交考试
+### 5.3 提交考试（分布式锁优化）
 
-- Controller 先调用 `flushAll(examId, studentId)`：同步冲刷 buffer 中该考生所有题目，取消未到期任务。
-- 等待 500ms 让 MQ 发送完成（生产可用回调/积压监控替代），再将 `exam_participants` 状态置为已提交（幂等）。
-- 如需要可增加：提交前从 Redis pattern 扫描补写一次 DB，减少极端丢失窗口。
+- **分布式锁机制**：
+  - 使用 Redisson 分布式锁，锁 key：`exam:submit:lock:{examId}:{studentId}`
+  - 锁超时时间：10 秒（自动续期 watchdog）
+  - 获取锁失败策略：查询当前状态，如果已提交则返回成功，否则返回"提交中，请勿重复提交"
+- **流程**（在锁内执行）：
+  1. 尝试获取分布式锁（不等待，立即返回）
+  2. 获取锁成功：
+     - 检查是否已提交（幂等检查）
+     - 调用 `flushAll(examId, studentId)`：同步冲刷 buffer 中该考生所有题目，取消未到期任务
+     - 等待 500ms 让 MQ 发送完成（生产可用回调/积压监控替代）
+     - 将 `exam_participants` 状态置为已提交（幂等）
+     - 释放锁
+  3. 获取锁失败：查询当前状态，如果已提交则返回成功，否则返回错误
+- **关键点**：
+  - 分布式锁保证同一学生并发提交请求的串行化，防止重复提交
+  - flushAll 和状态更新在锁内执行，保证原子性
+  - 幂等处理，已提交的请求直接返回成功
 
 ### 5.4 失败与补偿
 
@@ -84,18 +108,55 @@
 - 横向扩展：提升 AnswerBuffer 线程池，或将缓冲合并迁到队列分片；MQ 分区/多 topic 分摊写入。
 - 限流与保护：对进入考试/答题接口可加学生-考试级别的速率限制；Redis key TTL 自动清理长时间不活跃的会话。
 
-### 5.6 监控与预警
+### 5.6 用户级别限流（应用层）
 
-- 关键指标：SETNX 失败率（重复进入）、Redis 写/读失败率、MQ 发送/消费延迟与积压、答题落库成功率、buffer 队列长度。
-- 日志：进入考试、刷写答案、提交考试都记录 examId/studentId/sortOrder 以便追溯。
+- **限流实现**：
+  - 使用 AOP 切面 + Redis + Lua 脚本实现分布式限流
+  - 限流算法：令牌桶算法（允许突发流量）
+  - 限流维度：用户级别（基于 studentId）
+- **限流规则**：
+  - 进入考试：每个学生每秒最多 2 次
+  - 保存答题：每个学生每秒最多 10 次
+  - 提交考试：每个学生每秒最多 1 次
+- **限流流程**：
+  1. Controller 方法上标注 `@UserRateLimit` 注解
+  2. AOP 切面拦截方法执行，提取用户ID
+  3. 调用限流服务检查是否允许通过
+  4. 使用 Redis + Lua 脚本执行令牌桶算法
+  5. 如果被限流，抛出 `RateLimitException`，返回 429 状态码
+- **降级策略**：
+  - Redis 故障时：允许通过（fail-open），记录告警
+  - 限流服务异常时：允许通过，记录告警
+- **监控统计**：
+  - 记录限流成功/失败次数、失败率
+  - 日志格式：`[限流监控]` 前缀，便于日志分析和过滤
+
+### 5.7 监控与预警
+
+- **锁监控**：
+  - 实时记录锁的获取、释放、持有时间、竞争情况
+  - 统计锁的成功/失败次数、平均持有时间、失败率
+  - 定时输出锁监控统计信息（每5分钟）
+  - 自动告警：失败率 > 10% 或平均持有时间过长时记录警告日志
+  - 日志格式：`[锁监控]` 前缀，便于日志分析和过滤
+- **限流监控**：
+  - 记录限流触发次数、失败率
+  - 日志格式：`[限流监控]` 前缀，便于日志分析和过滤
+- **其他关键指标**：SETNX 失败率（重复进入）、Redis 写/读失败率、MQ 发送/消费延迟与积压、答题落库成功率、buffer 队列长度。
+- **日志**：进入考试、刷写答案、提交考试都记录 examId/studentId/sortOrder 以便追溯。
 
 ## 6. 配置与运行
 
 - 配置文件：`exam-system-online-server/src/main/resources/application.yml`
   - MySQL: `jdbc:mysql://localhost:3306/online_exam_system`
   - Redis: `host/port/db` (默认 0)
+  - Redisson: 自动配置，连接池大小 10，最小空闲连接 5
   - RocketMQ: `name-server`, topic `exam-answer-save`
   - 定时任务：`exam.status.update-interval`、`initial-delay`
+  - 限流配置：`rate-limit.user-level.rules`（进入考试、保存答题、提交考试的限流规则）
+- 依赖说明：
+  - Redisson 3.24.3：用于分布式锁（已添加到 `exam-system-online-core/pom.xml`）
+  - Spring Boot Starter AOP：用于限流切面（已添加到 `exam-system-online-core/pom.xml`）
 - 启动顺序：启动 MySQL、Redis、RocketMQ → 运行 `exam-system-online-server`。
 - 初始化：导入 `online_exam_system.sql`。
 

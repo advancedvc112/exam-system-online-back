@@ -100,5 +100,27 @@ public class RedisService {
             }
         }
     }
+    
+    /**
+     * 执行Lua脚本
+     * @param script Lua脚本
+     * @param keys 键列表
+     * @param args 参数列表
+     * @return 执行结果
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T executeScript(String script, java.util.List<String> keys, java.util.List<Object> args) {
+        try {
+            org.springframework.data.redis.core.script.DefaultRedisScript<T> redisScript = 
+                new org.springframework.data.redis.core.script.DefaultRedisScript<>();
+            redisScript.setScriptText(script);
+            redisScript.setResultType((Class<T>) Long.class);
+            // 使用正确的execute方法签名：execute(RedisScript<T> script, List<K> keys, Object... args)
+            return redisTemplate.execute(redisScript, keys, args.toArray());
+        } catch (Exception e) {
+            log.error("执行Lua脚本失败: script={}, keys={}, args={}", script, keys, args, e);
+            throw new RuntimeException("执行Lua脚本失败", e);
+        }
+    }
 }
 
