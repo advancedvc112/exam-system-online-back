@@ -19,6 +19,7 @@
     <modules>
         <module>exam-system-online-core</module>
         <module>exam-system-online-server</module>
+        <module>exam-system-online-actuator</module>
     </modules>
 
     <properties>

@@ -1,14 +1,25 @@
 server:
-  port: 8080
+  port: 8081  # 监控模块使用不同的端口，避免与主应用冲突
 
 spring:
   application:
-    name: exam-system-online-server
+    name: exam-system-online-admin
+  
+  # 数据库配置（用于 MySQL 监控）
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/online_exam_system?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
     password: root
+    # HikariCP 连接池配置（用于监控连接池状态）
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # Redis 配置（用于健康检查和指标收集）
   data:
     redis:
       host: 192.168.27.104
@@ -24,61 +35,19 @@ spring:
           database: 0
           connectionPoolSize: 10
           connectionMinimumIdleSize: 5
-  # Spring Boot Admin Client 配置 - 注册到 Admin Server
-  boot:
-    admin:
-      client:
-        url: http://localhost:8081  # Admin Server 地址
-        instance:
-          prefer-ip: true  # 使用 IP 而不是主机名
-exam:
-  status:
-    update-interval: 60s
-    initial-delay: 10s
 
-mybatis:
-  mapper-locations: classpath:mapper/**/*.xml
-  type-aliases-package: com.exam.online.dal.dataobject
+# Spring Boot Admin 配置
+spring.boot.admin:
+  context-path: /
+  # 监控的应用列表（可以添加多个应用）
+  # 如果主应用也注册到 Admin Server，需要配置主应用的 actuator 端点
+  # 这里监控模块自己注册自己
+  monitor:
+    period: 10s
+    status-lifetime: 10s
+    info-lifetime: 1d
 
-logging:
-  level:
-    root: info
-
-rocketmq:
-  name-server: 192.168.27.104:9876
-  producer:
-    group: exam-producer-group
-  answer:
-    topic: exam-answer-save
-    consumer-group: exam-answer-consumer-group
-
-rate-limit:
-  enabled: true
-  default-algorithm: token-bucket
-  user-level:
-    enabled: true
-    algorithm: token-bucket
-    rules:
-      enter-exam:
-        enabled: true
-        qps: 2
-        capacity: 2
-        refill-rate: 2
-        interval: 1
-      save-answer:
-        enabled: true
-        qps: 10
-        capacity: 10
-        refill-rate: 10
-        interval: 1
-      submit-exam:
-        enabled: true
-        qps: 1
-        capacity: 1
-        refill-rate: 1
-        interval: 1
-
-# Actuator 配置 - 暴露监控端点
+# Actuator 配置
 management:
   endpoints:
     web:
@@ -115,7 +84,24 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+    # 启用 JVM 指标
+    jvm:
+      enabled: true
+    # 启用系统指标
+    system:
+      enabled: true
+    # 启用 HTTP 指标
+    web:
+      server:
+        auto-time-requests: true
     # 启用数据库连接池指标（HikariCP）
     datasource:
       enabled: true
+
+# 日志配置
+logging:
+  level:
+    root: info
+    com.exam.online.actuator: debug
+    de.codecentric.boot.admin: info
 

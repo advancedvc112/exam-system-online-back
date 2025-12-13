@@ -8,6 +8,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="exam-system-online-core" />
+        <module name="exam-system-online-actuator" />
         <module name="exam-system-online-server" />
       </profile>
     </annotationProcessing>
@@ -17,6 +18,7 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="exam-system-online-actuator" options="-parameters" />
       <module name="exam-system-online-core" options="-parameters" />
       <module name="exam-system-online-server" options="-parameters" />
     </option>

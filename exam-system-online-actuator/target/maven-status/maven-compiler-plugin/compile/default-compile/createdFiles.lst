@@ -1,0 +1,4 @@
+com\exam\online\actuator\config\ActuatorConfig.class
+com\exam\online\actuator\metrics\CustomMetricsCollector.class
+com\exam\online\actuator\health\CustomHealthIndicator.class
+com\exam\online\actuator\ActuatorApplication.class
