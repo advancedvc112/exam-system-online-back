@@ -3,6 +3,8 @@ package com.exam.online.controller.admin.controller.exam;
 import com.exam.online.dto.ExamAddQuestionsRequest;
 import com.exam.online.dto.ExamCreateRequest;
 import com.exam.online.dto.ExamResponse;
+import com.exam.online.dto.ExamRandomGenerateRequest;
+import com.exam.online.dto.ExamRandomGenerateResponse;
 import com.exam.online.dto.ExamStatusUpdateRequest;
 import com.exam.online.dto.ExamUpdateRequest;
 import com.exam.online.dto.Result;
@@ -61,6 +63,20 @@ public class ExamController {
         log.info("试卷添加题目，examId={}, items={}", examId, request.getItems() == null ? 0 : request.getItems().size());
         examService.addQuestions(examId, request);
         return Result.success("添加题目成功");
+    }
+
+    /**
+     * 随机智能组卷
+     * 支持多题型配置，如果typeConfigs为null或空，则启用兜底机制按比例自动组卷
+     */
+    @PostMapping("/{examId}/questions/random-generate")
+    public Result<ExamRandomGenerateResponse> randomGenerateQuestions(@PathVariable("examId") Long examId,
+                                                                      @Valid @RequestBody ExamRandomGenerateRequest request) {
+        log.info("随机智能组卷，examId={}, questionTag={}, typeConfigs={}", 
+                examId, request.getQuestionTag(), 
+                request.getTypeConfigs() == null ? "null(启用兜底)" : request.getTypeConfigs().size() + "个配置");
+        ExamRandomGenerateResponse response = examService.randomGenerateQuestions(examId, request);
+        return Result.success("智能组卷成功", response);
     }
 
     /**
