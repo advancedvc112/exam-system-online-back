@@ -1,0 +1,108 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql-container-exam
+    restart: always
+    networks:
+      - app-network
+    environment:
+      - MYSQL_ROOT_PASSWORD=root@123
+      - MYSQL_DATABASE=online_exam_system
+      - MYSQL_USER=app_user
+      - MYSQL_PASSWORD=app@123
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - /root/exam-online-project/mysql/init/online_exam_system.sql:/docker-entrypoint-initdb.d/online_exam_system.sql:ro
+    ports:
+      - "3307:3306"
+
+  redis:
+    image: redis:7
+    container_name: redis-container
+    restart: always
+    networks:
+      - app-network
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-data:/data
+
+  mq-namesrv:
+    image: apache/rocketmq:5.3.1
+    container_name: rocketmq-namesrv
+    restart: always
+    networks:
+      - app-network
+    command: ["sh","-c","cd /home/rocketmq/rocketmq-5.3.1 && bin/mqnamesrv"]
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx256m -Xmn128m"
+    ports:
+      - "9876:9876"
+
+  mq-broker:
+    image: apache/rocketmq:5.3.1
+    container_name: rocketmq-broker
+    restart: always
+    networks:
+      - app-network
+    depends_on:
+      - mq-namesrv
+    command: >
+      sh -c "
+      cd /home/rocketmq/rocketmq-5.3.1 &&
+      sed -i 's#localhost:9876#mq-namesrv:9876#g' conf/broker.conf &&
+      bin/mqbroker -n mq-namesrv:9876 -c conf/broker.conf
+      "
+    environment:
+      JAVA_OPT_EXT: "-Xms512m -Xmx512m -Xmn256m"
+    ports:
+      - "10911:10911"
+      - "10909:10909"
+
+  backend:
+    build: ./backend
+    image: exam-backend:latest
+    container_name: backend-container-exam
+    restart: always
+    networks:
+      - app-network
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/online_exam_system?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root@123
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - ROCKETMQ_NAME_SERVER=mq-namesrv:9876
+      - SERVER_PORT=8081
+      - SPRING_BOOT_ADMIN_CLIENT_ENABLED=false
+      - SPRING_BOOT_ADMIN_CLIENT_URL=
+    depends_on:
+      - db
+      - redis
+      - mq-namesrv
+      - mq-broker
+    ports:
+      - "8083:8081"
+
+  frontend:
+    build: ./frontend
+    image: exam-frontend:latest
+    container_name: frontend-container-exam
+    restart: always
+    networks:
+      - app-network
+    depends_on:
+      - backend
+    ports:
+      - "83:80"  # 前端容器内部默认 80，如需改动请同步前端 Dockerfile 配置
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
+
