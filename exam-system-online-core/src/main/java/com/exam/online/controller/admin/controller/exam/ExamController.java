@@ -66,6 +66,15 @@ public class ExamController {
     }
 
     /**
+     * 根据考试ID查询试卷题目内容
+     */
+    @GetMapping("/{examId}/questions/detail")
+    public Result<ExamRandomGenerateResponse> getExamQuestions(@PathVariable("examId") Long examId) {
+        log.info("查询试卷题目详情，examId={}", examId);
+        return Result.success(examService.getExamQuestions(examId));
+    }
+
+    /**
      * 随机智能组卷
      * 支持多题型配置，如果typeConfigs为null或空，则启用兜底机制按比例自动组卷
      */

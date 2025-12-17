@@ -4,15 +4,18 @@ import com.exam.online.dto.LoginRequest;
 import com.exam.online.dto.LoginResponse;
 import com.exam.online.dto.RegisterRequest;
 import com.exam.online.dto.Result;
+import com.exam.online.dto.UserInfoResponse;
 import com.exam.online.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -40,6 +43,15 @@ public class AuthController {
     public Result<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
         log.info("用户注册请求，username={}", request.getUsername());
         return Result.success("注册成功", authService.register(request));
+    }
+
+    /**
+     * 根据用户名精确查询用户信息
+     */
+    @GetMapping("/user-info")
+    public Result<UserInfoResponse> getUserInfo(@RequestParam("username") String username) {
+        log.info("查询用户信息，username={}", username);
+        return Result.success(authService.queryUserInfo(username));
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)

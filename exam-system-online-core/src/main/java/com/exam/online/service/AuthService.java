@@ -6,6 +6,7 @@ import com.exam.online.dal.mapper.SystemUserMapper;
 import com.exam.online.dto.LoginRequest;
 import com.exam.online.dto.LoginResponse;
 import com.exam.online.dto.RegisterRequest;
+import com.exam.online.dto.UserInfoResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,6 +45,14 @@ public class AuthService {
         return new LoginResponse(user.getId(), user.getUsername());
     }
 
+    public UserInfoResponse queryUserInfo(String username) {
+        SystemUserDO user = getByUsername(username);
+        if (user == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+        return new UserInfoResponse(user.getId(), user.getUsername(), mapRoleToIdentity(user.getUserRole()));
+    }
+
     private SystemUserDO getByUsername(String username) {
         return systemUserMapper.selectOne(new LambdaQueryWrapper<SystemUserDO>()
                 .eq(SystemUserDO::getUsername, username)
@@ -69,6 +78,18 @@ public class AuthService {
 
         systemUserMapper.insert(user);
         return user;
+    }
+
+    private String mapRoleToIdentity(Integer userRole) {
+        if (userRole == null) {
+            return "未知";
+        }
+        return switch (userRole) {
+            case 1 -> "学生";
+            case 2 -> "老师";
+            case 3 -> "管理员";
+            default -> "未知";
+        };
     }
 }
 

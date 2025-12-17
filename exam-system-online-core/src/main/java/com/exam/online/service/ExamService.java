@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -92,6 +93,60 @@ public class ExamService {
                 entity.getEndTime(),
                 entity.getDuration()
         );
+    }
+
+    /**
+     * 根据考试ID获取试卷题目详情
+     */
+    public ExamRandomGenerateResponse getExamQuestions(Long examId) {
+        if (examId == null || examId <= 0) {
+            throw new IllegalArgumentException("考试ID不合法");
+        }
+        ExamDO exam = examMapper.selectById(examId);
+        if (exam == null || (exam.getIsDelete() != null && exam.getIsDelete() == 1)) {
+            throw new IllegalArgumentException("考试不存在或已被删除");
+        }
+
+        List<ExamQuestionDO> relations = examQuestionMapper.selectList(
+                new LambdaQueryWrapper<ExamQuestionDO>()
+                        .eq(ExamQuestionDO::getExamId, examId)
+                        .orderByAsc(ExamQuestionDO::getSortOrder)
+        );
+        if (relations.isEmpty()) {
+            return new ExamRandomGenerateResponse(Collections.emptyList(), 0, 0);
+        }
+
+        List<Long> questionIds = relations.stream()
+                .map(ExamQuestionDO::getQuestionId)
+                .toList();
+
+        List<QuestionBankDO> questions = questionBankMapper.selectList(
+                new LambdaQueryWrapper<QuestionBankDO>()
+                        .in(QuestionBankDO::getId, questionIds)
+                        .eq(QuestionBankDO::getIsDeleted, 0)
+        );
+        Map<Long, QuestionBankDO> questionMap = questions.stream()
+                .collect(Collectors.toMap(QuestionBankDO::getId, q -> q));
+
+        List<ExamRandomGenerateResponse.QuestionItem> items = new ArrayList<>();
+        int totalScore = 0;
+        for (ExamQuestionDO relation : relations) {
+            QuestionBankDO question = questionMap.get(relation.getQuestionId());
+            if (question == null) {
+                throw new IllegalArgumentException("题目不存在或已被删除: " + relation.getQuestionId());
+            }
+            items.add(new ExamRandomGenerateResponse.QuestionItem(
+                    question.getId(),
+                    question.getQuestionCategory(),
+                    question.getQuestionContent(),
+                    relation.getQuestionScore(),
+                    relation.getSortOrder(),
+                    relation.getGroupId()
+            ));
+            totalScore += relation.getQuestionScore() == null ? 0 : relation.getQuestionScore();
+        }
+
+        return new ExamRandomGenerateResponse(items, items.size(), totalScore);
     }
 
     @Transactional
