@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="直接改考试记录-考试ID=7（5道单选全选A）">
+      <stringProp name="TestPlan.comments">不登录、不进入考试，直接根据studentId修改考试7的答题记录（5道单选全选A）并提交考试</stringProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="baseUrl" elementType="Argument">
+            <stringProp name="Argument.name">baseUrl</stringProp>
+            <stringProp name="Argument.value">http://localhost:8080</stringProp>
+          </elementProp>
+          <elementProp name="saveAnswerPath" elementType="Argument">
+            <stringProp name="Argument.name">saveAnswerPath</stringProp>
+            <stringProp name="Argument.value">/api/student/exams/${examId}/answers</stringProp>
+          </elementProp>
+          <elementProp name="submitExamPath" elementType="Argument">
+            <stringProp name="Argument.name">submitExamPath</stringProp>
+            <stringProp name="Argument.value">/api/student/exams/${examId}/submit</stringProp>
+          </elementProp>
+          <elementProp name="userPrefix" elementType="Argument">
+            <stringProp name="Argument.name">userPrefix</stringProp>
+            <stringProp name="Argument.value">student</stringProp>
+          </elementProp>
+          <elementProp name="startIndex" elementType="Argument">
+            <stringProp name="Argument.name">startIndex</stringProp>
+            <stringProp name="Argument.value">101</stringProp>
+          </elementProp>
+          <elementProp name="userCount" elementType="Argument">
+            <stringProp name="Argument.name">userCount</stringProp>
+            <stringProp name="Argument.value">901</stringProp>
+          </elementProp>
+          <elementProp name="examId" elementType="Argument">
+            <stringProp name="Argument.name">examId</stringProp>
+            <stringProp name="Argument.value">7</stringProp>
+          </elementProp>
+          <elementProp name="rampUpSeconds" elementType="Argument">
+            <stringProp name="Argument.name">rampUpSeconds</stringProp>
+            <stringProp name="Argument.value">60</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+    </TestPlan>
+    <hashTree>
+      <!-- HTTP默认配置 -->
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP默认配置">
+        <stringProp name="HTTPSampler.domain">localhost</stringProp>
+        <stringProp name="HTTPSampler.port">8080</stringProp>
+        <stringProp name="HTTPSampler.protocol">http</stringProp>
+        <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+      </ConfigTestElement>
+      <hashTree/>
+
+      <!-- HTTP头管理器 -->
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP头管理器">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="Content-Type" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- Cookie管理器 -->
+      <CookieManager guiclass="CookiePanel" testclass="CookieManager" testname="Cookie管理器"/>
+      <hashTree/>
+
+      <!-- 主线程组：直接答题并提交 -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="直接答题-提交">
+        <stringProp name="ThreadGroup.num_threads">${userCount}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${rampUpSeconds}</stringProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <!-- 生成 studentId（你可以按需要自己改范围） -->
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="生成studentId">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+// 这里直接用 startIndex 作为第一个 studentId，连续递增 userCount 个
+int startIndex = Integer.parseInt(vars.get("startIndex"));   // 比如 101
+int threadNum = ctx.getThreadNum();                          // 0..(userCount-1)
+int studentId = startIndex + threadNum;
+vars.put("studentId", String.valueOf(studentId));
+log.info("线程 " + threadNum + " -> studentId: " + studentId);
+]]></stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <!-- 思考时间，模拟作答 -->
+        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="作答思考时间">
+          <stringProp name="ConstantTimer.delay">200</stringProp>
+        </ConstantTimer>
+        <hashTree/>
+
+        <!-- 依次保存5道单选题的答案，全选A -->
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="5道题循环" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">5</stringProp>
+        </LoopController>
+        <hashTree>
+          <!-- 计算当前题目序号(1-5)，答案统一为"A" -->
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="设置当前题目与答案A">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+int idx = (prev == null ? 0 : Integer.parseInt(vars.get("JMeterThread.last_sample_ok") == null ? "0" : vars.get("loopCounter") ?: "0"));
+// 使用 JMeter 内部计数器更可靠：这里简单用内置变量循环次数
+String loopIndex = vars.get("__jm__5道题循环__idx");
+int sortOrder = 1;
+if (loopIndex != null) {
+    sortOrder = Integer.parseInt(loopIndex) + 1; // 1..5
+}
+vars.put("sortOrder", String.valueOf(sortOrder));
+vars.put("answer", "A");
+]]></stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
+
+          <!-- 保存单题答案 -->
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="保存单选题答案(A)">
+            <stringProp name="HTTPSampler.path">${saveAnswerPath}</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{&quot;examId&quot;:${examId},&quot;studentId&quot;:${studentId},&quot;sortOrder&quot;:${sortOrder},&quot;answer&quot;:&quot;${answer}&quot;}</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+        </hashTree>
+
+        <!-- 再稍微等待一下，模拟检查 -->
+        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="提交前等待时间">
+          <stringProp name="ConstantTimer.delay">200</stringProp>
+        </ConstantTimer>
+        <hashTree/>
+
+        <!-- 提交考试 -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="提交考试">
+          <stringProp name="HTTPSampler.path">${submitExamPath}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&quot;examId&quot;:${examId},&quot;studentId&quot;:${studentId}}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="验证提交成功或已提交">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="200">2</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <intProp name="Assertion.test_type">2</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+
+      <!-- 汇总报告 -->
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="汇总报告">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+
+      <!-- 聚合报告 -->
+      <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="聚合报告">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
+
+

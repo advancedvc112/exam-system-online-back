@@ -44,6 +44,12 @@ public class ExamRandomGenerateResponse {
          * 题目内容
          */
         private String questionContent;
+
+        /**
+         * 题目选项（JSON 串，例如 ["选项A","选项B","选项C","选项D"]；
+         *  仅单选/多选题会有内容，其它题型可为空）
+         */
+        private String questionOptions;
         
         /**
          * 题目分数

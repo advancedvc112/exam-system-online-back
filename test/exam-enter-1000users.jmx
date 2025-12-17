@@ -12,7 +12,7 @@
           </elementProp>
           <elementProp name="enterExamPath" elementType="Argument">
             <stringProp name="Argument.name">enterExamPath</stringProp>
-            <stringProp name="Argument.value">/api/student/exams/2/enter</stringProp>
+            <stringProp name="Argument.value">/api/student/exams/7/enter</stringProp>
           </elementProp>
           <elementProp name="startUserId" elementType="Argument">
             <stringProp name="Argument.name">startUserId</stringProp>

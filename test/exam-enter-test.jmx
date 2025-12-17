@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
-    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="1000学生1分钟进入考试ID=2">
-      <stringProp name="TestPlan.comments">1000名学生（student4到student1003）在1分钟内登录并进入考试ID=2</stringProp>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="1000学生1分钟进入考试ID=7">
+      <stringProp name="TestPlan.comments">1000名学生（student4到student1003）在1分钟内登录并进入考试ID=7</stringProp>
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
       <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments">
         <collectionProp name="Arguments.arguments">
@@ -36,7 +36,7 @@
           </elementProp>
           <elementProp name="examId" elementType="Argument">
             <stringProp name="Argument.name">examId</stringProp>
-            <stringProp name="Argument.value">2</stringProp>
+            <stringProp name="Argument.value">7</stringProp>
           </elementProp>
           <elementProp name="rampUpSeconds" elementType="Argument">
             <stringProp name="Argument.name">rampUpSeconds</stringProp>
@@ -162,7 +162,7 @@ if (token == null || token.isEmpty()) {
         <hashTree/>
 
         <!-- 进入考试请求 -->
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="进入考试ID=2">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="进入考试ID=7">
           <stringProp name="HTTPSampler.path">${enterExamPath}</stringProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
@@ -203,7 +203,7 @@ String studentId = vars.get("studentId");
 boolean success = prev.isSuccessful();
 
 if (success) {
-    log.info("✓ 学生 " + username + " (ID:" + studentId + ") 成功进入考试ID=2");
+    log.info("✓ 学生 " + username + " (ID:" + studentId + ") 成功进入考试ID=7");
     vars.put("examStatus", "SUCCESS");
 } else {
     log.error("✗ 学生 " + username + " 进入考试失败");

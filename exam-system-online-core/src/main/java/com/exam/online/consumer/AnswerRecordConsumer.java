@@ -35,8 +35,9 @@ public class AnswerRecordConsumer implements RocketMQListener<AnswerMessage> {
     @Transactional
     public void onMessage(AnswerMessage message) {
         try {
-            log.debug("收到答题记录消息: examId={}, studentId={}, sortOrder={}", 
-                message.getExamId(), message.getStudentId(), message.getSortOrder());
+            log.info("收到答题记录消息: examId={}, studentId={}, sortOrder={}, questionId={}, answer={}",
+                message.getExamId(), message.getStudentId(), message.getSortOrder(),
+                message.getQuestionId(), message.getAnswer());
             
             // 1. 获取或创建participant记录
             ExamParticipantDO participant = examParticipantMapper.selectOne(
@@ -100,8 +101,13 @@ public class AnswerRecordConsumer implements RocketMQListener<AnswerMessage> {
                 answerRecordMapper.updateById(answerRecord);
             }
             
-            log.debug("答题记录保存成功: participantId={}, questionId={}", 
-                participant.getId(), message.getQuestionId());
+            log.info("答题记录持久化成功: examId={}, studentId={}, participantId={}, questionId={}, changeTimes={}, userAnswer={}",
+                message.getExamId(),
+                message.getStudentId(),
+                participant.getId(),
+                message.getQuestionId(),
+                answerRecord.getChangeTimes(),
+                answerRecord.getUserAnswer());
                 
         } catch (Exception e) {
             log.error("处理答题记录消息失败: {}", message, e);

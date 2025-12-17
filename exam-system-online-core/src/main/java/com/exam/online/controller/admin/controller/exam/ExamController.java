@@ -46,6 +46,15 @@ public class ExamController {
     }
 
     /**
+     * 根据考试ID查询考试详情
+     */
+    @GetMapping("/{examId}")
+    public Result<ExamResponse> getById(@PathVariable("examId") Long examId) {
+        log.info("查询考试详情，examId={}", examId);
+        return Result.success(examService.getById(examId));
+    }
+
+    /**
      * 创建试卷
      */
     @PostMapping("/create")

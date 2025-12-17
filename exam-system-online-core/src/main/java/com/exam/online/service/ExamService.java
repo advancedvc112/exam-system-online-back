@@ -63,6 +63,29 @@ public class ExamService {
                 .toList();
     }
 
+    /**
+     * 根据考试ID查询单个考试详情
+     */
+    public ExamResponse getById(Long examId) {
+        if (examId == null || examId <= 0) {
+            throw new IllegalArgumentException("考试ID不合法");
+        }
+        ExamDO exam = examMapper.selectById(examId);
+        if (exam == null || (exam.getIsDelete() != null && exam.getIsDelete() == 1)) {
+            throw new IllegalArgumentException("考试不存在或已被删除");
+        }
+        return new ExamResponse(
+                exam.getId(),
+                exam.getExamName(),
+                exam.getExamDescription(),
+                exam.getExamType(),
+                exam.getStatus(),
+                exam.getStartTime(),
+                exam.getEndTime(),
+                exam.getDuration()
+        );
+    }
+
     public ExamResponse createExam(ExamCreateRequest request) {
         validateTimeRange(request.getStartTime(), request.getEndTime());
 
@@ -135,14 +158,15 @@ public class ExamService {
             if (question == null) {
                 throw new IllegalArgumentException("题目不存在或已被删除: " + relation.getQuestionId());
             }
-            items.add(new ExamRandomGenerateResponse.QuestionItem(
-                    question.getId(),
-                    question.getQuestionCategory(),
-                    question.getQuestionContent(),
-                    relation.getQuestionScore(),
-                    relation.getSortOrder(),
-                    relation.getGroupId()
-            ));
+            ExamRandomGenerateResponse.QuestionItem item = new ExamRandomGenerateResponse.QuestionItem();
+            item.setQuestionId(question.getId());
+            item.setQuestionCategory(question.getQuestionCategory());
+            item.setQuestionContent(question.getQuestionContent());
+            item.setQuestionOptions(question.getQuestionOptions());
+            item.setQuestionScore(relation.getQuestionScore());
+            item.setSortOrder(relation.getSortOrder());
+            item.setGroupId(relation.getGroupId());
+            items.add(item);
             totalScore += relation.getQuestionScore() == null ? 0 : relation.getQuestionScore();
         }
 
@@ -453,6 +477,7 @@ public class ExamService {
                 questionItem.setQuestionId(question.getId());
                 questionItem.setQuestionCategory(question.getQuestionCategory());
                 questionItem.setQuestionContent(question.getQuestionContent());
+                questionItem.setQuestionOptions(question.getQuestionOptions());
                 questionItem.setQuestionScore(score);
                 questionItem.setSortOrder(currentSortOrder);
                 questionItem.setGroupId(groupId);
