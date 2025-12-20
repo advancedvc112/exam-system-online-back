@@ -163,3 +163,122 @@
 ## 7. 测试与压测
 
 - JMeter 脚本位于 `test/`（如 `exam-test-fixed.jmx`），可对进入考试、答题保存与提交进行并发压测。
+
+## 8. 监控模块（exam-system-online-actuator）
+
+该项目提供独立的监控模块 `exam-system-online-actuator`，基于 Spring Boot Actuator + Micrometer + Prometheus + Grafana，便于在生产环境观察应用健康与关键业务指标。已把模块文档合并到此处，便于集中查看。
+
+### 功能特性
+
+- ✅ 接口监控：HTTP 请求 QPS、延迟、错误率
+- ✅ 数据库监控：连接池状态、SQL 执行时间
+- ✅ Redis 监控：连接数、命令执行时间、内存使用
+- ✅ RocketMQ 监控：消息发送/消费速率、延迟、积压
+- ✅ 业务监控：限流统计、分布式锁统计
+- ✅ JVM 监控：内存、GC、线程
+
+### 模块结构（代码位置）
+
+```text
+exam-system-online-actuator/
+├── src/main/java/com/exam/online/actuator/
+│   ├── ActuatorApplication.java          # 启动类
+   │   ├── config/
+   │   │   └── ActuatorConfig.java        # Actuator 配置
+   │   ├── metrics/
+   │   │   └── CustomMetricsCollector.java# 自定义指标收集器
+   │   └── health/
+   │       └── CustomHealthIndicator.java # 自定义健康检查
+├── src/main/resources/
+│   └── application.yml                    # 配置文件
+├── prometheus.yml                         # Prometheus 配置示例
+├── grafana-dashboard.json                 # Grafana 仪表板配置
+└── README.md                              # 已合并到根 README
+```
+
+### 快速开始（本地/容器）
+
+- 启动监控模块（开发）
+
+```bash
+cd exam-system-online-actuator
+mvn spring-boot:run
+```
+
+- 打包后启动
+
+```bash
+mvn clean package
+java -jar target/exam-system-online-actuator-1.0-SNAPSHOT.jar
+```
+
+监控模块默认运行在 `http://localhost:8081`（可通过 `application.yml` 修改）。
+
+### 常用端点
+
+- 健康检查: `http://localhost:8081/actuator/health`
+- Prometheus 指标: `http://localhost:8081/actuator/prometheus`
+- 所有指标: `http://localhost:8081/actuator/metrics`
+- 应用信息: `http://localhost:8081/actuator/info`
+
+### 配置 Prometheus（示例）
+
+1. 将项目根目录下的 `prometheus.yml`（actuator 模块内）复制到 Prometheus 安装目录；
+2. 在 `prometheus.yml` 的 `scrape_configs.targets` 中加入 `localhost:8081` 或实际地址；
+3. 启动 Prometheus：
+
+```bash
+./prometheus --config.file=prometheus.yml
+```
+
+也可以使用 Docker 方式运行 Prometheus 与 Grafana（略）。
+
+### 监控指标说明（业务与系统）
+
+部分业务指标示例：
+
+- `exam_rate_limit_success_total`：限流成功次数（Counter）
+- `exam_rate_limit_failure_total`：限流失败次数（Counter）
+- `exam_rate_limit_failure_rate`：限流失败率（Gauge）
+- `exam_lock_submit_exam_hold_time_seconds`：提交考试锁持有时间（Timer）
+
+系统指标（Micrometer/Actuator）示例：
+
+- `http_server_requests_seconds`：HTTP 请求耗时
+- `jvm_memory_used_bytes`：JVM 内存使用
+- `jdbc_connections_active`：数据库活跃连接数
+
+### 安全建议（生产）
+
+在生产环境请缩小暴露的 actuator 端点，例如：
+
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  security:
+    enabled: true
+```
+
+并在反向代理/网关层做鉴权与白名单限制。
+
+### 扩展与告警
+
+- 可在 `CustomMetricsCollector` 中注册自定义业务指标。
+- 在 Prometheus 中添加 `alert_rules.yml`，配置告警规则（如错误率、MQ 积压告警）。
+
+### 参考资料
+
+- Spring Boot Actuator 文档: [https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html](https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html)
+- Micrometer 文档: [https://micrometer.io/docs](https://micrometer.io/docs)
+- Prometheus 文档: [https://prometheus.io/docs/](https://prometheus.io/docs/)
+- Grafana 文档: [https://grafana.com/docs/](https://grafana.com/docs/)
+
+## 9. 许可证
+
+MIT
